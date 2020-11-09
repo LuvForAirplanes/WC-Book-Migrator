@@ -14,8 +14,8 @@ namespace WCBookMigrator
             //var text = File.ReadAllText();
             //Console.WriteLine(text.Take(1000).ToArray());
 
-            XmlSerializer serializer = new XmlSerializer(typeof(object));
-            object resultingMessage = (object)serializer.Deserialize(new XmlTextReader(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "raw.txt")), );
+            XmlSerializer serializer = new XmlSerializer(typeof(object), new XmlRootAttribute("car"));
+            object resultingMessage = (object)serializer.Deserialize(new XmlTextReader(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "raw.txt")));
         }
     }
 }
