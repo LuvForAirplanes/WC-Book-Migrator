@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace WCBookMigrator.Models
 {
-    class Document
+    public class BaseModel
     {
+        public string Id { get; set; }
     }
 }
