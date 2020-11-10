@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <PackageReference Include="Humanizer" Version="2.8.26" />
+    <PackageReference Include="ChoETL" Version="1.1.0.4" />
   </ItemGroup>
 
   <ItemGroup>

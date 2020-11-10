@@ -7,6 +7,7 @@ using System.Xml.Serialization;
 using System.Collections.Generic;
 using WCBookMigrator.Models;
 using Humanizer;
+using ChoETL;
 
 namespace WCBookMigrator
 {
@@ -78,7 +79,7 @@ namespace WCBookMigrator
                         meter = newMeter;
                     }
 
-                    var rawTuneName = nodes[i].ChildNodes[2].InnerText;
+                    var rawTuneName = nodes[i].ChildNodes[2].InnerText.Replace("[", "").Replace(".", "");
                     var tune = tunes.FirstOrDefault(t => t.Name == rawTuneName);
 
                     if(tune == null)
@@ -109,10 +110,13 @@ namespace WCBookMigrator
                 {
                     //song body
                     var body = nodes[i].InnerText.Replace("<span>", "").Replace("</span>", "");
-                    var songSections = body.Split("\r\n", StringSplitOptions.None).ToList();
+                    var songSections = body.Split("\r\n    \r\n", StringSplitOptions.None).ToList();
 
                     for (int ii = 0; ii < songSections.Count; ii++)
                     {
+                        if(songSections[ii].Count() <= 1)
+                            break;
+
                         var section = new SongSection
                         {
                             Id = ii.ToString(),
@@ -123,6 +127,14 @@ namespace WCBookMigrator
                         songSection.Add(section);
 
                         var currentSongLines = songSections[ii].Split("\n").ToList();
+
+                        //remove spacing
+                        currentSongLines.RemoveAll(r => r == "\r");
+                        for (int b = 0; b < currentSongLines.Count; b++)
+                        {
+                            currentSongLines[b] = currentSongLines[b].Replace("    ", "").Replace("\r", "");
+                        }
+                        
                         for (int iii = 0; iii < currentSongLines.Count; iii++)
                         {
                             songSectionLine.Add(new SongSectionLine
@@ -135,6 +147,41 @@ namespace WCBookMigrator
                         }
                     }
                 }
+            }
+
+            using(var writer = new ChoCSVWriter<Song>(@"C:\output\songs.csv")) 
+            {
+                writer.Write(songs);
+            }
+
+            using(var writer = new ChoCSVWriter<Tune>(@"C:\output\tunes.csv")) 
+            {
+                writer.Write(tunes);
+            }
+
+            using(var writer = new ChoCSVWriter<Meter>(@"C:\output\meters.csv")) 
+            {
+                writer.Write(meters);
+            }
+
+            using(var writer = new ChoCSVWriter<BookPart>(@"C:\output\book_parts.csv")) 
+            {
+                writer.Write(parts);
+            }
+
+            using(var writer = new ChoCSVWriter<BookSection>(@"C:\output\book_section.csv")) 
+            {
+                writer.Write(sections);
+            }
+
+            using(var writer = new ChoCSVWriter<SongSection>(@"C:\output\song_sections.csv")) 
+            {
+                writer.Write(songSection);
+            }
+
+            using(var writer = new ChoCSVWriter<SongSectionLine>(@"C:\output\song_section_lines.csv")) 
+            {
+                writer.Write(songSectionLine);
             }
         }
     }
