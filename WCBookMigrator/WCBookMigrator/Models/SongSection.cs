@@ -12,6 +12,7 @@ namespace WCBookMigrator.Models
         public string Type { get; set; }
         public Song Song { get; set; }
         public string SongId { get; set; }
+        public int Order { get; set; }
         ///<summary>
         ///List of lines.
         ///</summary>

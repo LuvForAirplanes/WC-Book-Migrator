@@ -17,7 +17,8 @@ namespace WCBookMigrator.Models
         ///<summary>
         ///The tune that preferably sung with this song.
         ///</summary>
-        public string Tune { get; set; }
+        public Tune Tune { get; set; }
+        public string TuneId { get; set; }
         ///<summary>
         ///The section this song is in. e.g. Public Worship
         ///</summary>

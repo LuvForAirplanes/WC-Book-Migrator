@@ -19,6 +19,8 @@ namespace WCBookMigrator
             var meters = new List<Meter>();
             var parts = new List<BookPart>();
             var sections = new List<BookSection>();
+            var songSection = new List<SongSection>();
+            var songSectionLine = new List<SongSectionLine>();
 
             XmlSerializer serializer = new XmlSerializer(typeof(object), new XmlRootAttribute("car"));
             var nodes = (XmlNode[])serializer.Deserialize(new XmlTextReader(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "raw.xml")));
@@ -46,12 +48,13 @@ namespace WCBookMigrator
                 }
                 else if (nodes[i].Name == "h2" && nodes[i].NextSibling.Name == "h2")
                 {
+                    var children = nodes[i].ChildNodes;
                     //were at a section title
                     var bookSection = new BookSection
                     {
-                        Id = nodes[i].Name.Underscore(),
+                        Id = nodes[i].InnerText.Underscore(),
                         BookPartId = lastPartId,
-                        Name = nodes[i].Name.Humanize(LetterCasing.Title)
+                        Name = nodes[i].InnerText.Humanize(LetterCasing.Title)
                     };
 
                     sections.Add(bookSection);
@@ -60,12 +63,77 @@ namespace WCBookMigrator
                 }
                 else if (nodes[i].Name == "h2" && nodes[i].NextSibling.Name == "p")
                 {
+                    var rawMeterName = nodes[i].ChildNodes[1].InnerText;
+                    var meter = meters.FirstOrDefault(m => m.Name == rawMeterName);
+
+                    if(meter == null)
+                    {
+                        var newMeter = new Meter
+                        {
+                            Id = rawMeterName,
+                            Name = rawMeterName
+                        };
+
+                        meters.Add(newMeter);
+                        meter = newMeter;
+                    }
+
+                    var rawTuneName = nodes[i].ChildNodes[2].InnerText;
+                    var tune = tunes.FirstOrDefault(t => t.Name == rawTuneName);
+
+                    if(tune == null)
+                    {
+                        var newTune = new Tune
+                        {
+                            Id = rawTuneName,
+                            Name = rawTuneName
+                        };
+
+                        tunes.Add(newTune);
+                        tune = newTune;
+                    }
+
                     var song = new Song
                     {
                         Number = lastSong.Number + 1,
                         Id = (lastSong.Number + 1).ToString(),
-                        BookSectionId = lastSectionId
+                        BookSectionId = lastSectionId,
+                        MeterId = meter.Id,
+                        TuneId = tune.Id
                     };
+
+                    songs.Add(song);
+                    lastSong = song;
+                }
+                else if(nodes[i].Name == "p")
+                {
+                    //song body
+                    var body = nodes[i].InnerText.Replace("<span>", "").Replace("</span>", "");
+                    var songSections = body.Split("\r\n", StringSplitOptions.None).ToList();
+
+                    for (int ii = 0; ii < songSections.Count; ii++)
+                    {
+                        var section = new SongSection
+                        {
+                            Id = ii.ToString(),
+                            SongId = lastSong.Id,
+                            Order = ii
+                        };
+
+                        songSection.Add(section);
+
+                        var currentSongLines = songSections[ii].Split("\n").ToList();
+                        for (int iii = 0; iii < currentSongLines.Count; iii++)
+                        {
+                            songSectionLine.Add(new SongSectionLine
+                            {
+                                Id = iii.ToString(),
+                                Order = iii,
+                                SongSectionId = section.Id,
+                                Line = currentSongLines[iii]
+                            });
+                        }
+                    }
                 }
             }
         }
