@@ -6,6 +6,7 @@ using System.Xml;
 using System.Xml.Serialization;
 using System.Collections.Generic;
 using WCBookMigrator.Models;
+using WCBookMigrator.Models.DTOs;
 using Humanizer;
 using ChoETL;
 
@@ -15,20 +16,20 @@ namespace WCBookMigrator
     {
         static void Main(string[] args)
         {
-            var songs = new List<Song>();
-            var tunes = new List<Tune>();
-            var meters = new List<Meter>();
-            var parts = new List<BookPart>();
-            var sections = new List<BookSection>();
-            var songSection = new List<SongSection>();
-            var songSectionLine = new List<SongSectionLine>();
+            var songs = new List<SongDTO>();
+            var tunes = new List<TuneDTO>();
+            var meters = new List<MeterDTO>();
+            var parts = new List<BookPartDTO>();
+            var sections = new List<BookSectionDTO>();
+            var songSection = new List<SongSectionDTO>();
+            var songSectionLine = new List<SongSectionLineDTO>();
 
             XmlSerializer serializer = new XmlSerializer(typeof(object), new XmlRootAttribute("car"));
             var nodes = (XmlNode[])serializer.Deserialize(new XmlTextReader(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "raw.xml")));
             
             var lastSectionId = "";
             var lastPartId = "";
-            var lastSong = new Song
+            var lastSong = new SongDTO
             {
                 Number = 0
             };
@@ -38,7 +39,8 @@ namespace WCBookMigrator
                 if(nodes[i].Name == "h1")
                 {
                     //we're at a header
-                    var bookPart = new BookPart{
+                    var bookPart = new BookPartDTO
+                    {
                         Id = nodes[i].InnerText.Underscore(),
                         Name = nodes[i].InnerText.Humanize(LetterCasing.Title)
                     };
@@ -51,7 +53,7 @@ namespace WCBookMigrator
                 {
                     var children = nodes[i].ChildNodes;
                     //were at a section title
-                    var bookSection = new BookSection
+                    var bookSection = new BookSectionDTO
                     {
                         Id = nodes[i].InnerText.Underscore(),
                         BookPartId = lastPartId,
@@ -69,7 +71,7 @@ namespace WCBookMigrator
 
                     if(meter == null)
                     {
-                        var newMeter = new Meter
+                        var newMeter = new MeterDTO
                         {
                             Id = rawMeterName,
                             Name = rawMeterName
@@ -84,7 +86,7 @@ namespace WCBookMigrator
 
                     if(tune == null)
                     {
-                        var newTune = new Tune
+                        var newTune = new TuneDTO
                         {
                             Id = rawTuneName,
                             Name = rawTuneName
@@ -94,7 +96,7 @@ namespace WCBookMigrator
                         tune = newTune;
                     }
 
-                    var song = new Song
+                    var song = new SongDTO
                     {
                         Number = lastSong.Number + 1,
                         Id = (lastSong.Number + 1).ToString(),
@@ -117,9 +119,9 @@ namespace WCBookMigrator
                         if(songSections[ii].Count() <= 1)
                             break;
 
-                        var section = new SongSection
+                        var section = new SongSectionDTO
                         {
-                            Id = ii.ToString(),
+                            Id = lastSong.Id + "." + ii,
                             SongId = lastSong.Id,
                             Order = ii
                         };
@@ -137,9 +139,9 @@ namespace WCBookMigrator
                         
                         for (int iii = 0; iii < currentSongLines.Count; iii++)
                         {
-                            songSectionLine.Add(new SongSectionLine
+                            songSectionLine.Add(new SongSectionLineDTO
                             {
-                                Id = iii.ToString(),
+                                Id = lastSong.Id + "." + section.Order + "." + iii.ToString(),
                                 Order = iii,
                                 SongSectionId = section.Id,
                                 Line = currentSongLines[iii]
@@ -149,37 +151,37 @@ namespace WCBookMigrator
                 }
             }
 
-            using(var writer = new ChoCSVWriter<Song>(@"C:\output\songs.csv")) 
+            using(var writer = new ChoCSVWriter<SongDTO>(@"C:\output\songs.csv")) 
             {
                 writer.Write(songs);
             }
 
-            using(var writer = new ChoCSVWriter<Tune>(@"C:\output\tunes.csv")) 
+            using(var writer = new ChoCSVWriter<TuneDTO>(@"C:\output\tunes.csv")) 
             {
                 writer.Write(tunes);
             }
 
-            using(var writer = new ChoCSVWriter<Meter>(@"C:\output\meters.csv")) 
+            using(var writer = new ChoCSVWriter<MeterDTO>(@"C:\output\meters.csv")) 
             {
                 writer.Write(meters);
             }
 
-            using(var writer = new ChoCSVWriter<BookPart>(@"C:\output\book_parts.csv")) 
+            using(var writer = new ChoCSVWriter<BookPartDTO>(@"C:\output\book_parts.csv")) 
             {
                 writer.Write(parts);
             }
 
-            using(var writer = new ChoCSVWriter<BookSection>(@"C:\output\book_section.csv")) 
+            using(var writer = new ChoCSVWriter<BookSectionDTO>(@"C:\output\book_section.csv")) 
             {
                 writer.Write(sections);
             }
 
-            using(var writer = new ChoCSVWriter<SongSection>(@"C:\output\song_sections.csv")) 
+            using(var writer = new ChoCSVWriter<SongSectionDTO>(@"C:\output\song_sections.csv")) 
             {
                 writer.Write(songSection);
             }
 
-            using(var writer = new ChoCSVWriter<SongSectionLine>(@"C:\output\song_section_lines.csv")) 
+            using(var writer = new ChoCSVWriter<SongSectionLineDTO>(@"C:\output\song_section_lines.csv")) 
             {
                 writer.Write(songSectionLine);
             }
