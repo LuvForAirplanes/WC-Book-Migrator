@@ -24,8 +24,8 @@ namespace WCBookMigrator
             var songSection = new List<SongSectionDTO>();
             var songSectionLine = new List<SongSectionLineDTO>();
 
-            XmlSerializer serializer = new XmlSerializer(typeof(object), new XmlRootAttribute("car"));
-            var nodes = (XmlNode[])serializer.Deserialize(new XmlTextReader(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "raw.xml")));
+            XmlSerializer serializer = new XmlSerializer(typeof(object), new XmlRootAttribute("html"));
+            var nodes = (XmlNode[])serializer.Deserialize(new XmlTextReader(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "raw2.xml")));
             
             var lastSectionId = "";
             var lastPartId = "";
@@ -81,7 +81,7 @@ namespace WCBookMigrator
                         meter = newMeter;
                     }
 
-                    var rawTuneName = nodes[i].ChildNodes[2].InnerText.Replace("[", "").Replace(".", "");
+                    var rawTuneName = nodes[i].ChildNodes[1].InnerText.Replace("[", "").Replace(".", "");
                     var tune = tunes.FirstOrDefault(t => t.Name == rawTuneName);
 
                     if(tune == null)
@@ -139,12 +139,17 @@ namespace WCBookMigrator
                         
                         for (int iii = 0; iii < currentSongLines.Count; iii++)
                         {
+                            var line = currentSongLines[iii];
+                            
+                            if(line.Trim() == "")
+                                continue;
+
                             songSectionLine.Add(new SongSectionLineDTO
                             {
                                 Id = lastSong.Id + "." + section.Order + "." + iii.ToString(),
                                 Order = iii,
                                 SongSectionId = section.Id,
-                                Line = currentSongLines[iii]
+                                Line = line
                             });
                         }
                     }
@@ -171,7 +176,7 @@ namespace WCBookMigrator
                 writer.Write(parts);
             }
 
-            using(var writer = new ChoCSVWriter<BookSectionDTO>(@"C:\output\book_section.csv")) 
+            using(var writer = new ChoCSVWriter<BookSectionDTO>(@"C:\output\book_sections.csv")) 
             {
                 writer.Write(sections);
             }
