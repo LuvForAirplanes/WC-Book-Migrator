@@ -1,14 +1,12 @@
-﻿using System;
-using System.Diagnostics.Contracts;
+﻿using ChoETL;
+using Humanizer;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml;
 using System.Xml.Serialization;
-using System.Collections.Generic;
-using WCBookMigrator.Models;
 using WCBookMigrator.Models.DTOs;
-using Humanizer;
-using ChoETL;
 
 namespace WCBookMigrator
 {
@@ -16,6 +14,8 @@ namespace WCBookMigrator
     {
         static void Main(string[] args)
         {
+            Directory.CreateDirectory("C:\\output");
+
             var songs = new List<SongDTO>();
             var tunes = new List<TuneDTO>();
             var meters = new List<MeterDTO>();
@@ -26,17 +26,17 @@ namespace WCBookMigrator
 
             XmlSerializer serializer = new XmlSerializer(typeof(object), new XmlRootAttribute("html"));
             var nodes = (XmlNode[])serializer.Deserialize(new XmlTextReader(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "raw2.xml")));
-            
+
             var lastSectionId = "";
             var lastPartId = "";
             var lastSong = new SongDTO
             {
                 Number = 0
             };
-            
+
             for (int i = 0; i < nodes.Length; i++)
             {
-                if(nodes[i].Name == "h1")
+                if (nodes[i].Name == "h1")
                 {
                     //we're at a header
                     var bookPart = new BookPartDTO
@@ -66,10 +66,10 @@ namespace WCBookMigrator
                 }
                 else if (nodes[i].Name == "h2" && nodes[i].NextSibling.Name == "p")
                 {
-                    var rawMeterName = nodes[i].ChildNodes[1].InnerText;
+                    var rawMeterName = nodes[i].ChildNodes[1].InnerText.Split("[").First().Trim().Replace(">", "");
                     var meter = meters.FirstOrDefault(m => m.Name == rawMeterName);
 
-                    if(meter == null)
+                    if (meter == null)
                     {
                         var newMeter = new MeterDTO
                         {
@@ -81,19 +81,29 @@ namespace WCBookMigrator
                         meter = newMeter;
                     }
 
-                    var rawTuneName = nodes[i].ChildNodes[1].InnerText.Replace("[", "").Replace(".", "");
-                    var tune = tunes.FirstOrDefault(t => t.Name == rawTuneName);
+                    var index = 1;
+                    if (!nodes[i].ChildNodes[1].InnerText.Contains("["))
+                        index = 2;
 
-                    if(tune == null)
+                    string tuneId = null;
+                    if (nodes[i].ChildNodes.Count - 1 >= index)
                     {
-                        var newTune = new TuneDTO
-                        {
-                            Id = rawTuneName,
-                            Name = rawTuneName
-                        };
+                        var rawTuneName = nodes[i].ChildNodes[index].InnerText.Split("[").Last().Replace(".", "").Replace("—", "-").Replace("{", "");
+                        var tune = tunes.FirstOrDefault(t => t.Name == rawTuneName);
 
-                        tunes.Add(newTune);
-                        tune = newTune;
+                        if (tune == null)
+                        {
+                            var newTune = new TuneDTO
+                            {
+                                Id = rawTuneName,
+                                Name = rawTuneName
+                            };
+
+                            tunes.Add(newTune);
+                            tune = newTune;
+                        }
+
+                        tuneId = tune?.Id;
                     }
 
                     var song = new SongDTO
@@ -102,13 +112,13 @@ namespace WCBookMigrator
                         Id = (lastSong.Number + 1).ToString(),
                         BookSectionId = lastSectionId,
                         MeterId = meter.Id,
-                        TuneId = tune.Id
+                        TuneId = tuneId
                     };
 
                     songs.Add(song);
                     lastSong = song;
                 }
-                else if(nodes[i].Name == "p")
+                else if (nodes[i].Name == "p")
                 {
                     //song body
                     var body = nodes[i].InnerText.Replace("<span>", "").Replace("</span>", "");
@@ -116,7 +126,7 @@ namespace WCBookMigrator
 
                     for (int ii = 0; ii < songSections.Count; ii++)
                     {
-                        if(songSections[ii].Count() <= 1)
+                        if (songSections[ii].Count() <= 1)
                             break;
 
                         var section = new SongSectionDTO
@@ -136,12 +146,12 @@ namespace WCBookMigrator
                         {
                             currentSongLines[b] = currentSongLines[b].Replace("    ", "").Replace("\r", "");
                         }
-                        
+
                         for (int iii = 0; iii < currentSongLines.Count; iii++)
                         {
                             var line = currentSongLines[iii];
-                            
-                            if(line.Trim() == "")
+
+                            if (line.Trim() == "")
                                 continue;
 
                             songSectionLine.Add(new SongSectionLineDTO
@@ -156,37 +166,37 @@ namespace WCBookMigrator
                 }
             }
 
-            using(var writer = new ChoCSVWriter<SongDTO>(@"C:\output\songs.csv")) 
+            using (var writer = new ChoCSVWriter<SongDTO>(@"C:\output\songs.csv"))
             {
                 writer.Write(songs);
             }
 
-            using(var writer = new ChoCSVWriter<TuneDTO>(@"C:\output\tunes.csv")) 
+            using (var writer = new ChoCSVWriter<TuneDTO>(@"C:\output\tunes.csv"))
             {
                 writer.Write(tunes);
             }
 
-            using(var writer = new ChoCSVWriter<MeterDTO>(@"C:\output\meters.csv")) 
+            using (var writer = new ChoCSVWriter<MeterDTO>(@"C:\output\meters.csv"))
             {
                 writer.Write(meters);
             }
 
-            using(var writer = new ChoCSVWriter<BookPartDTO>(@"C:\output\book_parts.csv")) 
+            using (var writer = new ChoCSVWriter<BookPartDTO>(@"C:\output\book_parts.csv"))
             {
                 writer.Write(parts);
             }
 
-            using(var writer = new ChoCSVWriter<BookSectionDTO>(@"C:\output\book_sections.csv")) 
+            using (var writer = new ChoCSVWriter<BookSectionDTO>(@"C:\output\book_sections.csv"))
             {
                 writer.Write(sections);
             }
 
-            using(var writer = new ChoCSVWriter<SongSectionDTO>(@"C:\output\song_sections.csv")) 
+            using (var writer = new ChoCSVWriter<SongSectionDTO>(@"C:\output\song_sections.csv"))
             {
                 writer.Write(songSection);
             }
 
-            using(var writer = new ChoCSVWriter<SongSectionLineDTO>(@"C:\output\song_section_lines.csv")) 
+            using (var writer = new ChoCSVWriter<SongSectionLineDTO>(@"C:\output\song_section_lines.csv"))
             {
                 writer.Write(songSectionLine);
             }
