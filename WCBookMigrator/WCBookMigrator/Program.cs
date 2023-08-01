@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Serialization;
 using WCBookMigrator.Models.DTOs;
@@ -122,7 +123,11 @@ namespace WCBookMigrator
                 {
                     //song body
                     var body = nodes[i].InnerText.Replace("<span>", "").Replace("</span>", "");
-                    var songSections = body.Split("\r\n    \r\n", StringSplitOptions.None).ToList();
+                    var songSections = Regex.Replace(body.ReplaceLineEndings(), @" +", " ")
+                        .Replace(Environment.NewLine + " ", Environment.NewLine)
+                        .Trim()
+                        .Split(Environment.NewLine + Environment.NewLine, StringSplitOptions.None)
+                        .ToList();
 
                     for (int ii = 0; ii < songSections.Count; ii++)
                     {
@@ -138,14 +143,7 @@ namespace WCBookMigrator
 
                         songSection.Add(section);
 
-                        var currentSongLines = songSections[ii].Split("\n").ToList();
-
-                        //remove spacing
-                        currentSongLines.RemoveAll(r => r == "\r");
-                        for (int b = 0; b < currentSongLines.Count; b++)
-                        {
-                            currentSongLines[b] = currentSongLines[b].Replace("    ", "").Replace("\r", "");
-                        }
+                        var currentSongLines = songSections[ii].Split(Environment.NewLine).ToList();
 
                         for (int iii = 0; iii < currentSongLines.Count; iii++)
                         {
@@ -196,7 +194,10 @@ namespace WCBookMigrator
                 writer.Write(songSection);
             }
 
-            using (var writer = new ChoCSVWriter<SongSectionLineDTO>(@"C:\output\song_section_lines.csv"))
+            using (var writer = new ChoCSVWriter<SongSectionLineDTO>(@"C:\output\song_section_lines.csv", new ChoCSVRecordConfiguration
+            {
+                Delimiter = "$",
+            }))
             {
                 writer.Write(songSectionLine);
             }
